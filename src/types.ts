@@ -8,6 +8,12 @@ export interface ApiConfig {
   model: string;
 }
 
+export interface UploadedImage {
+  name: string;
+  base64: string;
+  type: string;
+}
+
 export interface AnimeShot {
   globalStyle?: string;
   duration: string;

@@ -27,11 +27,13 @@ import {
   X,
   Globe,
   History,
-  Clock
+  Clock,
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateAnimeScript, regenerateShot } from './services/geminiService';
-import { ApiConfig, AnimeShot, ProviderType, HistoryItem } from './types';
+import { ApiConfig, AnimeShot, ProviderType, HistoryItem, UploadedImage } from './types';
 
 const STORAGE_KEY = 'anime_script_pro_config';
 const INPUT_STORAGE_KEY = 'anime_script_pro_input';
@@ -73,8 +75,33 @@ export default function App() {
     }
   });
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImages(prev => [
+          ...prev,
+          {
+            name: file.name,
+            base64: reader.result as string,
+            type: file.type
+          }
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (name: string) => {
+    setUploadedImages(prev => prev.filter(img => img.name !== name));
+  };
 
   const saveConfig = (newConfig: ApiConfig) => {
     setConfig(newConfig);
@@ -91,7 +118,7 @@ export default function App() {
     // Sync input to storage
     localStorage.setItem(INPUT_STORAGE_KEY, input);
     try {
-      const result = await generateAnimeScript(input, config);
+      const result = await generateAnimeScript(input, config, uploadedImages);
       setScript(result);
       localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(result));
       
@@ -107,9 +134,9 @@ export default function App() {
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
     } catch (error: any) {
       console.error("Generation error:", error);
-      const isNetworkError = error.message?.includes('fetch') || error.message?.includes('Network') || error.message?.includes('Failed');
-      setErrorToast(isNetworkError ? "生成失败：未能获取" : `生成失败: ${error.message || '未知错误'}`);
-      setTimeout(() => setErrorToast(null), 4000);
+      const isNetworkError = error.message === 'Failed to fetch' || error.message?.includes('Network') || error.message === 'TypeError: Failed to fetch';
+      setErrorToast(isNetworkError ? "生成失败：未能获取 (请检查 CORS 或网络)" : `生成失败: ${error.message || '未知错误'}`);
+      setTimeout(() => setErrorToast(null), 6000);
     } finally {
       setLoading(false);
     }
@@ -119,7 +146,7 @@ export default function App() {
     if (!regenModal || !script) return;
     setRegenLoading(true);
     try {
-      const newShot = await regenerateShot(script, regenModal.index, regenModal.instruction, config);
+      const newShot = await regenerateShot(script, regenModal.index, regenModal.instruction, config, uploadedImages);
       const newScript = [...script];
       newScript[regenModal.index] = newShot;
       setScript(newScript);
@@ -127,9 +154,9 @@ export default function App() {
       setRegenModal(null);
     } catch (error: any) {
       console.error("Regeneration error:", error);
-      const isNetworkError = error.message?.includes('fetch') || error.message?.includes('Network') || error.message?.includes('Failed');
-      setErrorToast(isNetworkError ? "生成失败：未能获取" : `镜头重新生成失败: ${error.message}`);
-      setTimeout(() => setErrorToast(null), 4000);
+      const isNetworkError = error.message === 'Failed to fetch' || error.message?.includes('Network') || error.message === 'TypeError: Failed to fetch';
+      setErrorToast(isNetworkError ? "生成失败：未能获取 (请检查 CORS 或网络)" : `镜头重新生成失败: ${error.message}`);
+      setTimeout(() => setErrorToast(null), 6000);
     } finally {
       setRegenLoading(false);
     }
@@ -166,7 +193,7 @@ export default function App() {
   const categories = [
     { label: '全局风格与画质基地', key: 'globalStyle', icon: <Sparkles className="w-4 h-4" /> },
     { label: '时长', key: 'duration', icon: <Loader2 className="w-4 h-4" /> },
-    { label: '运镜', key: 'cameraMovement', icon: <Camera className="w-4 h-4" /> },
+    { label: '运镜与景别', key: 'cameraMovement', icon: <Camera className="w-4 h-4" /> },
     { label: '画面描述', key: 'description', icon: <Film className="w-4 h-4" /> },
     { label: '动作描述', key: 'action', icon: <User className="w-4 h-4" /> },
     { label: '站位描述', key: 'positioning', icon: <ArrowRightLeft className="w-4 h-4" /> },
@@ -299,6 +326,41 @@ export default function App() {
                     placeholder="输入剧情或一句话描述（例如：“血月下，武士与赛博巨龙的终极对决”）..."
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all min-h-[120px] resize-none text-sm leading-relaxed"
                   />
+
+                  {/* Image Upload Area */}
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <AnimatePresence>
+                      {uploadedImages.map((img) => (
+                        <motion.div 
+                          key={img.name}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="group relative w-16 h-16 rounded-xl border border-neutral-800 overflow-hidden"
+                        >
+                          <img src={img.base64} alt={img.name} className="w-full h-full object-cover" />
+                          <button 
+                            onClick={() => removeImage(img.name)}
+                            className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4 text-white" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    
+                    <label className="w-16 h-16 rounded-xl border-2 border-dashed border-neutral-800 flex items-center justify-center hover:border-orange-500/50 hover:bg-orange-500/5 cursor-pointer transition-all">
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleImageUpload}
+                      />
+                      <Upload className="w-5 h-5 text-neutral-600" />
+                    </label>
+                  </div>
+
                   <div className="absolute bottom-4 right-4 flex gap-2">
                     {input && (
                       <button 
