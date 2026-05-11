@@ -1,24 +1,28 @@
-import { GoogleGenAI, Type, InlineDataPart } from "@google/genai";
+import { GoogleGenAI, Type, Part } from "@google/genai";
 import { ApiConfig, AnimeShot, UploadedImage } from "../types";
 
 export async function generateAnimeScript(input: string, config: ApiConfig, images: UploadedImage[] = []): Promise<AnimeShot[]> {
-  const imageNames = images.map(img => img.name).join(", ");
+  const imageNames = images.map(img => img.name.replace(/\.[^/.]+$/, "")).join(", ");
   const prompt = `你是一位世界级的动漫导演和分镜规划师。
 请将以下输入转换成专业的、电影级的动漫脚本，包含顶级的CG级镜头。
 
 输入内容: "${input}"
 ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 
+重要指令：
+1. **视觉分析优先**：如果你收到了参考图片，你必须首先深度分析图片中角色的穿着（如：夹克、卫衣、制服）、颜色、发型、配饰以及场景特征。
+2. **严禁凭空想象描述**：在生成 "description"（画面描述）和 "action"（动作）时，必须严格遵守参考图中的视觉细节。例如：如果参考图中角色穿着夹克，在脚本描述中绝不能写成“短袖”或“ T恤”。所有视觉描述必须基于图片中的客观事实。
+
 要求:
 1. 生成至少 5-8 个详细镜头。
-2. 确保 "global_style" 针对高质量生成进行了优化（例如 "masterpiece, best quality, ultra-detailed, anime style, cinematic lighting"）。该字段请保持英文。
-3. **除了 global_style 之外，所有其他字段必须使用中文编写。**
-4. 如果输入中涉及到参考图片中的角色或场景，请在 "description" 或 "action" 字段中使用 "@图片名字" 的格式进行标注（例如：@小明 正在奔跑）。
+2. 确保 "global_style" 针对高质量生成进行了优化（例如："杰作，最佳质量，细节丰富，动漫风格，电影级光效"）。该字段请使用中文编写，不要包含 "8k" 或 "8k分辨率" 等关键词。
+3. **所有字段必须使用中文编写。**
+4. 如果输入中涉及到参考图片中的角色或场景，请在 "description" 或 "action" 字段中直接提及。如果需要标注引用，请用 "@名字" 的格式（如：@小明），但不要包含文件后缀。
 5. 运镜字段必须包含景别（如：特写、中景、远景、俯拍、仰拍）以及动态运镜描述（如：推镜头、拉镜头、摇镜头、移镜头、环绕镜头等）。
 6. 输出必须是一个镜头 JSON 数组。
 
 每个镜头的字段说明：
-- global_style (全局风格与画质基地：即分镜图提示词 Storyboard prompt，请使用英文描述，针对高质量图像生成优化)
+- global_style (全局风格与画质基地：即分镜图提示词 Storyboard prompt，请使用中文描述，针对高质量图像生成优化，不含8k关键词)
 - duration (时长，例如 "1.5s", "3s")
 - camera_movement (运镜：必须包含景别描述，以及推拉摇移、环绕、倒放、快进等专业的运镜描述)
 - description (画面描述：视觉效果、环境细节、CG级精度。若涉及参考图请用@标注)
@@ -44,7 +48,7 @@ export async function regenerateShot(
   config: ApiConfig,
   images: UploadedImage[] = []
 ): Promise<AnimeShot> {
-  const imageNames = images.map(img => img.name).join(", ");
+  const imageNames = images.map(img => img.name.replace(/\.[^/.]+$/, "")).join(", ");
   const prompt = `You are a world-class anime director. I have a script with ${fullScript.length} shots. 
 I need you to REGENERATE Shot #${targetIndex + 1} based on a specific instruction, while keeping it consistent with the previous and next shots.
 
@@ -57,21 +61,24 @@ ${JSON.stringify(fullScript[targetIndex], null, 2)}
 Instruction for regeneration: "${instruction}"
 ${images.length > 0 ? `Reference images: ${imageNames}` : ""}
 
+Important: 
+- Analyze image visual features FIRST (clothing, appearance, environment).
+- Descriptions must STRICTLY MATCH the reference images provided. No shirts if they wear jackets in images.
+
 Constraints:
 1. Return ONLY the JSON object for the regenerated Shot #${targetIndex + 1}.
 2. Ensure high-end CG level descriptions.
 3. Keep the overall flow consistent.
-4. global_style must be in English.
-5. All other fields must be in Chinese.
-6. Use "@image_name" to reference specific characters or environments from the uploaded images.
-7. camera_movement MUST include shot scale (景别).
+4. All fields must be in Chinese. global_style must not contain "8k" or quality keywords like that.
+5. Use "@name" (no extension) to reference specific characters or environments from the uploaded images.
+6. camera_movement MUST include shot scale (景别).
 
 Required JSON fields:
-- global_style (全局风格与画质基地: Storyboard prompt in English)
+- global_style (全局风格与画质基地: Storyboard prompt in Chinese, no 8k)
 - duration
 - camera_movement (MUST include shot scale)
-- description (Reference images with @)
-- action (Reference images with @)
+- description (Reference images with @name)
+- action (Reference images with @name)
 - positioning
 - lighting
 - fx
@@ -90,7 +97,7 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
   const client = new GoogleGenAI({ apiKey: config.apiKey });
   const modelId = config.model || "gemini-1.5-flash";
 
-  const imageParts: InlineDataPart[] = images.map(img => ({
+  const imageParts: Part[] = images.map(img => ({
     inlineData: {
       data: img.base64.split(",")[1], // Remove mime type prefix
       mimeType: img.type
@@ -192,24 +199,43 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
     });
 
     if (!response.ok) {
-      let errText = '';
+      const rawText = await response.text();
+      let errText = rawText;
       try {
-        const errorJson = await response.json();
-        errText = errorJson.error?.message || errorJson.error || JSON.stringify(errorJson);
+        const errorJson = JSON.parse(rawText);
+        errText = errorJson.error?.message || errorJson.error?.msg || errorJson.message || rawText;
       } catch {
-        errText = await response.text();
+        // Not JSON, use raw text
       }
       
       console.error(`[AI Error] ${response.status}: ${errText}`);
       throw new Error(errText || `HTTP ${response.status}`);
     }
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    const rawData = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawData);
+    } catch (e) {
+      console.error("[JSON Parse Error] Raw response:", rawData);
+      throw new Error("API 返回了无效的 JSON 格式");
+    }
+    
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      console.error("[API Error] Missing content in choices:", data);
+      throw new Error(data.error?.message || "API 未返回内容，请检查模型权限或额度");
+    }
     
     // Clean potential markdown code blocks
     const cleanContent = content.replace(/```json\n?|```/g, '').trim();
-    const json = JSON.parse(cleanContent);
+    let json;
+    try {
+      json = JSON.parse(cleanContent);
+    } catch (e) {
+      console.error("[Content Parse Error] Cleaned content:", cleanContent);
+      throw new Error("AI 生成的内容无法解析为 JSON，请重试");
+    }
 
     // Some non-standard models might wrap the array in a property if prompt asked for an array but response_format is json_object
     let finalJson = json;
@@ -235,16 +261,22 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
 }
 
 function mapShot(shot: any): AnimeShot {
+  const clean = (str: string) => {
+    if (!str) return "";
+    // Remove @prefix and .extension suffix from tagged items like @name.png
+    return str.replace(/@([^.\s]+)(\.[a-z0-9]+)?/gi, '$1');
+  };
+
   return {
-    globalStyle: shot.global_style || "",
+    globalStyle: clean(shot.global_style || ""),
     duration: shot.duration || shot.duration_label || "",
-    cameraMovement: shot.camera_movement || shot.cameraMovement || "",
-    description: shot.description || "",
-    action: shot.action || "",
-    positioning: shot.positioning || "",
-    lighting: shot.lighting || "",
-    fx: shot.fx || shot.characteristics || shot.special_effects || "",
-    sfx: shot.sfx || "",
+    cameraMovement: clean(shot.camera_movement || shot.cameraMovement || ""),
+    description: clean(shot.description || ""),
+    action: clean(shot.action || ""),
+    positioning: clean(shot.positioning || ""),
+    lighting: clean(shot.lighting || ""),
+    fx: clean(shot.fx || shot.characteristics || shot.special_effects || ""),
+    sfx: clean(shot.sfx || ""),
     music: "无",
   };
 }

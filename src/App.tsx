@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Sparkles, 
   Send, 
@@ -83,7 +83,7 @@ export default function App() {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedImages(prev => [
@@ -278,8 +278,9 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className={`font-black tracking-tighter italic uppercase transition-all duration-500 ${script ? 'text-xl' : 'text-4xl md:text-6xl mb-4'}`}>
-              Anime <span className="text-orange-500">Script</span> Pro
+            <h1 className={`font-black tracking-normal transition-all duration-500 ${script ? 'text-xl' : 'text-5xl md:text-7xl mb-4'}`}>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-neutral-100 to-neutral-400 mr-3 inline-block">森夏</span>
+              <span className="text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-wider">故事板</span>
             </h1>
           </motion.div>
 

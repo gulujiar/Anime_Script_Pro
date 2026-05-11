@@ -1,6 +1,6 @@
 {
-  "name": "Anime Script Pro",
-  "description": "Professional one-sentence anime script generator for Seedance 2.0 featuring cinematic CG prompts, storyboard details, and technical cinematography.",
+  "name": "森夏故事板",
+  "description": "专业的动漫脚本与分镜生成平台，支持 3.1 Pro、Gemini 等主流大模型，支持原画参考与景别运镜标注。",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
