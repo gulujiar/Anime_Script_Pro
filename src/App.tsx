@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
   Send, 
@@ -29,7 +29,8 @@ import {
   History,
   Clock,
   Image as ImageIcon,
-  Upload
+  Upload,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateAnimeScript, regenerateShot } from './services/geminiService';
@@ -39,6 +40,7 @@ const STORAGE_KEY = 'anime_script_pro_config';
 const INPUT_STORAGE_KEY = 'anime_script_pro_input';
 const SCRIPT_STORAGE_KEY = 'anime_script_pro_script';
 const HISTORY_STORAGE_KEY = 'anime_script_pro_history';
+const IMAGES_STORAGE_KEY = 'anime_script_pro_images';
 
 const DEFAULT_CONFIG: ApiConfig = {
   provider: 'google',
@@ -75,9 +77,42 @@ export default function App() {
     }
   });
   const [errorToast, setErrorToast] = useState<string | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>(() => {
+    const saved = localStorage.getItem(IMAGES_STORAGE_KEY);
+    try {
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-save images to localStorage
+  useEffect(() => {
+    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
+  }, [uploadedImages]);
+
+  // Ctrl+S Keyboard Shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        localStorage.setItem(INPUT_STORAGE_KEY, input);
+        if (script) {
+          localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(script));
+        }
+        localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
+        
+        setSuccessToast("内容已保存至浏览器缓存");
+        setTimeout(() => setSuccessToast(null), 2000);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [input, script, uploadedImages]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -128,6 +163,7 @@ export default function App() {
         id: Math.random().toString(36).substring(2, 9) + Date.now().toString(),
         input,
         script: result,
+        uploadedImages: [...uploadedImages],
         timestamp: Date.now(),
       };
       const newHistory = [newItem, ...history];
@@ -228,13 +264,25 @@ export default function App() {
   const loadHistoryItem = (item: HistoryItem) => {
     setScript(item.script);
     setInput(item.input);
+    setUploadedImages(item.uploadedImages || []);
     localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(item.script));
     localStorage.setItem(INPUT_STORAGE_KEY, item.input);
+    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
     // Move it to the top of history
     const filtered = history.filter(h => h.id !== item.id);
     const newHistory = [item, ...filtered];
     setHistory(newHistory);
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+  };
+
+  const fillHistoryToInput = (item: HistoryItem) => {
+    setInput(item.input);
+    setUploadedImages(item.uploadedImages || []);
+    localStorage.setItem(INPUT_STORAGE_KEY, item.input);
+    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
+    setSuccessToast("内容已填充至输入框");
+    setTimeout(() => setSuccessToast(null), 2000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -253,6 +301,25 @@ export default function App() {
                 <X className="w-4 h-4 text-white" />
               </div>
               <p className="text-sm font-bold text-red-500">{errorToast}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Toast */}
+      <AnimatePresence>
+        {successToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 30, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed top-0 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4"
+          >
+            <div className="bg-orange-500/10 border border-orange-500/50 backdrop-blur-xl p-4 rounded-2xl flex items-center gap-3 shadow-2xl shadow-orange-500/20">
+              <div className="bg-orange-500 p-2 rounded-xl">
+                <CheckCircle2 className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-sm font-bold text-orange-500">{successToast}</p>
             </div>
           </motion.div>
         )}
@@ -442,15 +509,28 @@ export default function App() {
                               minute: '2-digit' 
                             })}
                           </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteHistoryItem(item.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-neutral-600 hover:text-red-400 transition-all"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                fillHistoryToInput(item);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-neutral-600 hover:text-orange-400 transition-all"
+                              title="填充此条内容"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteHistoryItem(item.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-neutral-600 hover:text-red-400 transition-all"
+                              title="删除记录"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
                           {item.input}

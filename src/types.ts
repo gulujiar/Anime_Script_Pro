@@ -32,5 +32,6 @@ export interface HistoryItem {
   id: string;
   input: string;
   script: AnimeShot[];
+  uploadedImages?: UploadedImage[];
   timestamp: number;
 }
