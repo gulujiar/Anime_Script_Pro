@@ -49,41 +49,41 @@ export async function regenerateShot(
   images: UploadedImage[] = []
 ): Promise<AnimeShot> {
   const imageNames = images.map(img => img.name.replace(/\.[^/.]+$/, "")).join(", ");
-  const prompt = `You are a world-class anime director. I have a script with ${fullScript.length} shots. 
-I need you to REGENERATE Shot #${targetIndex + 1} based on a specific instruction, while keeping it consistent with the previous and next shots.
+  const prompt = `你是一位世界级的动漫导演。我有一段包含 ${fullScript.length} 个镜头的脚本。
+我需要你根据特定指令【重新生成】第 ${targetIndex + 1} 个镜头，同时保持与前一个和后一个镜头的连贯性。
 
-Full Script Context:
-${fullScript.map((s, i) => `Shot ${i + 1}: ${s.description}`).join("\n")}
+全案脚本上下文（仅参考连贯性）：
+${fullScript.map((s, i) => `镜头 ${i + 1}: ${s.description}`).join("\n")}
 
-Target Shot current content:
+当前目标镜头内容：
 ${JSON.stringify(fullScript[targetIndex], null, 2)}
 
-Instruction for regeneration: "${instruction}"
-${images.length > 0 ? `Reference images: ${imageNames}` : ""}
+修改指令: "${instruction}"
+${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 
-Important: 
-- Analyze image visual features FIRST (clothing, appearance, environment).
-- Descriptions must STRICTLY MATCH the reference images provided. No shirts if they wear jackets in images.
+重要指令：
+1. **视觉分析优先**：如果你收到了参考图片，必须深度分析图片中角色的穿着、颜色、发型及场景特征。
+2. **视觉高度一致**：重新生成的镜头必须与上下文及参考图中的视觉细节（如：夹克、卫衣、场景细节）保持绝对一致。
+3. **严禁凭空想象描述**：如果参考图中角色穿着夹克，在脚本描述中绝不能写成“短袖”。
 
-Constraints:
-1. Return ONLY the JSON object for the regenerated Shot #${targetIndex + 1}.
-2. Ensure high-end CG level descriptions.
-3. Keep the overall flow consistent.
-4. All fields must be in Chinese and each sentence must end with a full stop (句号). global_style must not contain "8k" or quality keywords like that.
-5. Use "@name" (no extension) to reference specific characters or environments from the uploaded images.
-6. camera_movement MUST include shot scale (景别).
+要求：
+1. 仅返回重新生成的第 ${targetIndex + 1} 个镜头的 JSON 对象。
+2. 确保顶级 CG 级别的画面描述。
+3. **所有字段必须使用中文编写，且每句话的结尾必须加上句号。**
+4. 如果需要提及参考图中的角色，请直接使用 "文件名"（如：小明），不要使用特殊前缀。
+5. 运镜字段必须包含景别（如：特写、中景等）。
 
-Required JSON fields:
-- global_style (全局风格与画质基地: Storyboard prompt in Chinese, no 8k)
-- duration
-- camera_movement (MUST include shot scale)
-- description (Reference images with @name)
-- action (Reference images with @name)
-- positioning
-- lighting
-- fx
-- sfx
-- music (always "无")
+所需 JSON 字段：
+- global_style (全局风格与画质基地：请根据参考图或上下文分析，不含8k关键词)
+- duration (时长)
+- camera_movement (运镜：必须包含景别描述)
+- description (画面描述：使用"文件名"标注参考图)
+- action (动作描述：尽量不要描写服饰。使用"文件名"标注参考图)
+- positioning (站位描述)
+- lighting (光影逻辑)
+- fx (顶级特效)
+- sfx (音效描述)
+- music (音乐：固定填“无”)
 `;
 
   if (config.provider === 'google') {
