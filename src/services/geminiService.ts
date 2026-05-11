@@ -93,6 +93,33 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
   }
 }
 
+function extractJson(content: string): string {
+  // First, remove markdown code blocks
+  let cleaned = content.replace(/```json\n?|```/g, "").trim();
+  
+  // Find the first occurrence of { or [
+  const startBrace = cleaned.indexOf("{");
+  const startBracket = cleaned.indexOf("[");
+  
+  let startIndex = -1;
+  if (startBrace !== -1 && startBracket !== -1) {
+    startIndex = Math.min(startBrace, startBracket);
+  } else {
+    startIndex = startBrace !== -1 ? startBrace : startBracket;
+  }
+
+  if (startIndex === -1) return cleaned;
+
+  // Find the last occurrence of } or ]
+  const endBrace = cleaned.lastIndexOf("}");
+  const endBracket = cleaned.lastIndexOf("]");
+  const endIndex = Math.max(endBrace, endBracket);
+
+  if (endIndex === -1) return cleaned;
+
+  return cleaned.substring(startIndex, endIndex + 1);
+}
+
 async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: boolean, images: UploadedImage[] = []): Promise<any> {
   const client = new GoogleGenAI({ apiKey: config.apiKey });
   const modelId = config.model || "gemini-1.5-flash";
@@ -150,7 +177,14 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
 
   const text = response.text;
   if (!text) throw new Error("AI did not return any text");
-  const json = JSON.parse(text);
+  
+  let json;
+  try {
+    json = JSON.parse(extractJson(text));
+  } catch (e) {
+    console.error("[Gemini Parse Error] Raw text:", text);
+    throw new Error("AI 生成的内容无法解析为 JSON，请重试");
+  }
   
   if (isArray) {
     return json.map(mapShot);
@@ -229,13 +263,14 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
       throw new Error(data.error?.message || "API 未返回内容，请检查模型权限或额度");
     }
     
-    // Clean potential markdown code blocks
-    const cleanContent = content.replace(/```json\n?|```/g, '').trim();
+    // Clean potential markdown code blocks and extract JSON
+    const cleanContent = extractJson(content);
     let json;
     try {
       json = JSON.parse(cleanContent);
     } catch (e) {
       console.error("[Content Parse Error] Cleaned content:", cleanContent);
+      console.error("[Original Content]:", content);
       throw new Error("AI 生成的内容无法解析为 JSON，请重试");
     }
 
