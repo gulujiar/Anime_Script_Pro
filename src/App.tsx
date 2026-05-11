@@ -187,7 +187,6 @@ export default function App() {
         id: Math.random().toString(36).substring(2, 9) + Date.now().toString(),
         input,
         script: result,
-        uploadedImages: [...uploadedImages],
         timestamp: Date.now(),
       };
       // Limit history to 50 items
@@ -308,11 +307,9 @@ export default function App() {
   const loadHistoryItem = (item: HistoryItem) => {
     setScript(item.script);
     setInput(item.input);
-    setUploadedImages(item.uploadedImages || []);
     try {
       localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(item.script));
       localStorage.setItem(INPUT_STORAGE_KEY, item.input);
-      localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
     } catch (e) {}
     // Move it to the top of history
     const filtered = history.filter(h => h.id !== item.id);
@@ -325,10 +322,8 @@ export default function App() {
 
   const fillHistoryToInput = (item: HistoryItem) => {
     setInput(item.input);
-    setUploadedImages(item.uploadedImages || []);
     try {
       localStorage.setItem(INPUT_STORAGE_KEY, item.input);
-      localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
     } catch (e) {}
     setSuccessToast("内容已填充至输入框");
     setTimeout(() => setSuccessToast(null), 2000);
