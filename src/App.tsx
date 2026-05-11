@@ -91,7 +91,11 @@ export default function App() {
 
   // Auto-save images to localStorage
   useEffect(() => {
-    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
+    try {
+      localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
+    } catch (e) {
+      console.warn("localStorage quota exceeded while auto-saving images");
+    }
   }, [uploadedImages]);
 
   // Ctrl+S Keyboard Shortcut
@@ -99,14 +103,19 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        localStorage.setItem(INPUT_STORAGE_KEY, input);
-        if (script) {
-          localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(script));
+        try {
+          localStorage.setItem(INPUT_STORAGE_KEY, input);
+          if (script) {
+            localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(script));
+          }
+          localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
+          
+          setSuccessToast("内容已保存至浏览器缓存");
+          setTimeout(() => setSuccessToast(null), 2000);
+        } catch (e) {
+          setErrorToast("保存失败：浏览器缓存空间已满");
+          setTimeout(() => setErrorToast(null), 3000);
         }
-        localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(uploadedImages));
-        
-        setSuccessToast("内容已保存至浏览器缓存");
-        setTimeout(() => setSuccessToast(null), 2000);
       }
     };
 
@@ -141,7 +150,11 @@ export default function App() {
 
   const saveConfig = (newConfig: ApiConfig) => {
     setConfig(newConfig);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+    } catch (e) {
+      console.error("Failed to save config to localStorage");
+    }
   };
 
   const handleGenerate = async () => {
@@ -152,11 +165,16 @@ export default function App() {
     }
     setLoading(true);
     // Sync input to storage
-    localStorage.setItem(INPUT_STORAGE_KEY, input);
+    try {
+      localStorage.setItem(INPUT_STORAGE_KEY, input);
+    } catch (e) {}
+
     try {
       const result = await generateAnimeScript(input, config, uploadedImages);
       setScript(result);
-      localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(result));
+      try {
+        localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(result));
+      } catch (e) {}
       
       // Add to history
       const newItem: HistoryItem = {
@@ -166,9 +184,18 @@ export default function App() {
         uploadedImages: [...uploadedImages],
         timestamp: Date.now(),
       };
-      const newHistory = [newItem, ...history];
+      // Limit history to 10 items to save space
+      const newHistory = [newItem, ...history.slice(0, 9)];
       setHistory(newHistory);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+      } catch (e) {
+        console.warn("History storage quota exceeded");
+        // Try saving fewer history items if it fails
+        try {
+           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([newItem, ...history.slice(0, 3)]));
+        } catch (e2) {}
+      }
     } catch (error: any) {
       console.error("Generation error:", error);
       const isNetworkError = error.message === 'Failed to fetch' || error.message?.includes('Network') || error.message === 'TypeError: Failed to fetch';
@@ -187,7 +214,9 @@ export default function App() {
       const newScript = [...script];
       newScript[regenModal.index] = newShot;
       setScript(newScript);
-      localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(newScript));
+      try {
+        localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(newScript));
+      } catch (e) {}
       setRegenModal(null);
     } catch (error: any) {
       console.error("Regeneration error:", error);
@@ -258,28 +287,36 @@ export default function App() {
   const deleteHistoryItem = (id: string) => {
     const newHistory = history.filter(item => item.id !== id);
     setHistory(newHistory);
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    } catch (e) {}
   };
 
   const loadHistoryItem = (item: HistoryItem) => {
     setScript(item.script);
     setInput(item.input);
     setUploadedImages(item.uploadedImages || []);
-    localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(item.script));
-    localStorage.setItem(INPUT_STORAGE_KEY, item.input);
-    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
+    try {
+      localStorage.setItem(SCRIPT_STORAGE_KEY, JSON.stringify(item.script));
+      localStorage.setItem(INPUT_STORAGE_KEY, item.input);
+      localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
+    } catch (e) {}
     // Move it to the top of history
     const filtered = history.filter(h => h.id !== item.id);
     const newHistory = [item, ...filtered];
     setHistory(newHistory);
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    } catch (e) {}
   };
 
   const fillHistoryToInput = (item: HistoryItem) => {
     setInput(item.input);
     setUploadedImages(item.uploadedImages || []);
-    localStorage.setItem(INPUT_STORAGE_KEY, item.input);
-    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
+    try {
+      localStorage.setItem(INPUT_STORAGE_KEY, item.input);
+      localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(item.uploadedImages || []));
+    } catch (e) {}
     setSuccessToast("内容已填充至输入框");
     setTimeout(() => setSuccessToast(null), 2000);
     window.scrollTo({ top: 0, behavior: 'smooth' });
