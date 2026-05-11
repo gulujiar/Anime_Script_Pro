@@ -1,6 +1,10 @@
 import { GoogleGenAI, Type, Part } from "@google/genai";
 import { ApiConfig, AnimeShot, UploadedImage } from "../types";
 
+let lastRawResponse = "";
+
+export const getLastRawResponse = () => lastRawResponse;
+
 export async function generateAnimeScript(input: string, config: ApiConfig, images: UploadedImage[] = []): Promise<AnimeShot[]> {
   const imageNames = images.map(img => img.name.replace(/\.[^/.]+$/, "")).join(", ");
   const prompt = `你是一位世界级的动漫导演和分镜规划师。我需要用下面这段剧情在seedance 2.0做动画，请将以下输入转换成专业的、电影级的动漫脚本，包含顶级的CG级镜头。
@@ -31,7 +35,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - lighting (光影逻辑：光轴方向、色温、阴影强度、丁达尔效应等)
 - fx (顶级特效拆解：粒子、流体、爆破效果、能量流动)
 - sfx (音效描述：环境音、打击感)
-- dialogue (对白：角色此时说的话，如果没有对白则填“无”)
+- dialogue (对白：详细描述角色此时所说的话，格式为“角色名：对白内容”，例如“小明：这就是我梦寐以求的力量。”。如果没有对白则填“无”)
 - music (音乐：该字段固定填“无”)
 `;
 
@@ -84,7 +88,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - lighting (光影逻辑)
 - fx (顶级特效)
 - sfx (音效描述)
-- dialogue (对白描述：若无对白填“无”)
+- dialogue (对白描述：详细描述角色此时所说的话，格式为“角色名：对白内容”，例如“小明：这就是我梦寐以求的力量。”。若无对白填“无”)
 - music (音乐：固定填“无”)
 `;
 
@@ -190,6 +194,7 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
   });
 
   const text = response.text;
+  lastRawResponse = text || "";
   
   if (!text) throw new Error("AI did not return any text");
   
@@ -250,6 +255,7 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
     });
 
     const rawResponseText = await response.text();
+    lastRawResponse = rawResponseText;
 
     if (!response.ok) {
       let errText = rawResponseText;

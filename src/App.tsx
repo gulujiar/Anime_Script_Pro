@@ -33,7 +33,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateAnimeScript, regenerateShot } from './services/geminiService';
+import { generateAnimeScript, regenerateShot, getLastRawResponse } from './services/geminiService';
 import { ApiConfig, AnimeShot, ProviderType, HistoryItem, UploadedImage } from './types';
 
 const STORAGE_KEY = 'anime_script_pro_config';
@@ -64,6 +64,7 @@ export default function App() {
   const [regenModal, setRegenModal] = useState<{ index: number; instruction: string } | null>(null);
   const [regenLoading, setRegenLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [config, setConfig] = useState<ApiConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
@@ -98,7 +99,7 @@ export default function App() {
     }
   }, [uploadedImages]);
 
-  // Ctrl+S Keyboard Shortcut
+  // Ctrl+S & Ctrl+I Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -116,6 +117,11 @@ export default function App() {
           setErrorToast("保存失败：浏览器缓存空间已满");
           setTimeout(() => setErrorToast(null), 3000);
         }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        setShowDebug(prev => !prev);
       }
     };
 
@@ -833,6 +839,61 @@ export default function App() {
                 >
                   保存并关闭
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Debug Modal */}
+      <AnimatePresence>
+        {showDebug && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDebug(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl max-h-[80vh] bg-neutral-900 border border-neutral-800 rounded-2xl p-8 shadow-2xl flex flex-col gap-6 overflow-hidden"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-neutral-100 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-orange-500" />
+                  最近一次 AI 原始返回内容
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(getLastRawResponse());
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-xs font-bold transition-all"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {copied ? '已复制' : '复制原文'}
+                  </button>
+                  <button 
+                    onClick={() => setShowDebug(false)}
+                    className="p-2 text-neutral-500 hover:text-neutral-200 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-xl p-4 font-mono text-xs text-neutral-400 whitespace-pre-wrap leading-relaxed selection:bg-orange-500/20">
+                {getLastRawResponse() || "暂无返回内容"}
+              </div>
+
+              <div className="pt-4 border-t border-neutral-800 text-center">
+                <p className="text-xs text-neutral-500 italic">提示：此窗口显示的是 AI 返回的原始文本（包含 Markdown 片段等），用于排查 JSON 解析错误。</p>
               </div>
             </motion.div>
           </div>
