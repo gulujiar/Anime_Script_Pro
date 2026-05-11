@@ -23,7 +23,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 3. **所有字段必须使用中文编写，且每句话的结尾必须加上句号。**
 4. 如果输入中涉及到参考图片中的角色或场景，请在 "description" 或 "action" 字段中直接提及。如果需要标注引用，请用 "文件名" 的格式（如：小明），但不要包含文件后缀。
 5. 运镜字段必须包含景别（如：特写、中景、远景、俯拍、仰拍）以及动态运镜描述（如：推镜头、拉镜头、摇镜头、移镜头、环绕镜头等）。
-6. 输出必须是一个镜头 JSON 数组。
+6. **输出必须仅包含有效的 JSON 数据，严禁包含任何前言、后记、解释文字、或 Markdown 代码块包裹（即不要使用 \`\`\`json 开始或结束）。**
 
 每个镜头的字段说明：
 - global_style (全局风格与画质基地：即分镜图提示词 Storyboard prompt，请使用中文描述，针对高质量图像生成优化，不含8k关键词)
@@ -72,7 +72,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 3. **严禁凭空想象描述**：如果参考图中角色穿着夹克，在脚本描述中绝不能写成“短袖”。
 
 要求：
-1. 仅返回重新生成的第 ${targetIndex + 1} 个镜头的 JSON 对象。
+1. **输出必须仅包含重新生成的第 ${targetIndex + 1} 个镜头的 JSON 对象，严禁包含任何前言、后记、解释文字、或 Markdown 代码块包裹。**
 2. 确保顶级 CG 级别的画面描述。
 3. **所有字段必须使用中文编写，且每句话的结尾必须加上句号。**
 4. 如果需要提及参考图中的角色，请直接使用 "文件名"（如：小明），不要使用特殊前缀。
@@ -100,6 +100,8 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 }
 
 function extractJson(content: string): string {
+  if (!content) return "";
+  
   // First, remove markdown code blocks
   let cleaned = content.replace(/```json\n?|```/g, "").trim();
   
@@ -117,11 +119,21 @@ function extractJson(content: string): string {
   if (startIndex === -1) return cleaned;
 
   // Find the last occurrence of } or ]
-  const endBrace = cleaned.lastIndexOf("}");
-  const endBracket = cleaned.lastIndexOf("]");
-  const endIndex = Math.max(endBrace, endBracket);
+  let endBrace = cleaned.lastIndexOf("}");
+  let endBracket = cleaned.lastIndexOf("]");
+  
+  // Robustness for truncated JSON:
+  // If it's an array of objects and it was truncated, find the last COMPLETE object
+  if (startIndex === startBracket) {
+    // If the string doesn't end with ], it might be truncated
+    if (endBracket < endBrace) {
+      // Potentially truncated after the last object. Fix by appending ]
+      return cleaned.substring(startIndex, endBrace + 1) + "]";
+    }
+  }
 
-  if (endIndex === -1) return cleaned;
+  const endIndex = Math.max(endBrace, endBracket);
+  if (endIndex === -1 || endIndex < startIndex) return cleaned;
 
   return cleaned.substring(startIndex, endIndex + 1);
 }
