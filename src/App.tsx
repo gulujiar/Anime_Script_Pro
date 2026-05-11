@@ -45,7 +45,7 @@ const IMAGES_STORAGE_KEY = 'anime_script_pro_images';
 const DEFAULT_CONFIG: ApiConfig = {
   provider: 'google',
   apiKey: '',
-  model: 'gemini-1.5-flash',
+  model: 'gemini-3-flash-preview',
 };
 
 export default function App() {
@@ -773,7 +773,7 @@ export default function App() {
                         onClick={() => saveConfig({ 
                           ...config, 
                           provider: p.id as ProviderType,
-                          model: p.id === 'google' ? 'gemini-1.5-flash' : (p.id === 'grsai' ? 'gemini-3.1-pro' : config.model),
+                          model: p.id === 'google' ? 'gemini-1.5-flash' : (p.id === 'grsai' ? 'gemini-1.5-pro' : config.model),
                           baseUrl: p.id === 'volcengine' ? 'https://ark.cn-beijing.volces.com/api/v3' : (p.id === 'grsai' ? 'https://grsaiapi.com/v1' : '')
                         })}
                         className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${

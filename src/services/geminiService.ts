@@ -121,9 +121,19 @@ function extractJson(content: string): string {
 }
 
 async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: boolean, images: UploadedImage[] = []): Promise<any> {
-  const client = new GoogleGenAI({ apiKey: config.apiKey });
-  const modelId = config.model || "gemini-1.5-flash";
-
+  const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("请在设置中配置 Google Gemini API Key。");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Normalize model ID - Use gemini-3-flash-preview as default for text tasks
+  let modelId = config.model || "gemini-3-flash-preview";
+  if (modelId === "gemini-1.5-flash" || modelId === "models/gemini-1.5-flash") {
+    modelId = "gemini-3-flash-preview";
+  }
+  
   const imageParts: Part[] = images.map(img => ({
     inlineData: {
       data: img.base64.split(",")[1], // Remove mime type prefix
@@ -131,51 +141,52 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
     }
   }));
 
-  const response = await client.models.generateContent({
+  const schema = isArray ? {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        global_style: { type: Type.STRING },
+        duration: { type: Type.STRING },
+        camera_movement: { type: Type.STRING },
+        description: { type: Type.STRING },
+        action: { type: Type.STRING },
+        positioning: { type: Type.STRING },
+        lighting: { type: Type.STRING },
+        fx: { type: Type.STRING },
+        sfx: { type: Type.STRING },
+        music: { type: Type.STRING },
+      },
+      required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
+    }
+  } : {
+    type: Type.OBJECT,
+    properties: {
+      global_style: { type: Type.STRING },
+      duration: { type: Type.STRING },
+      camera_movement: { type: Type.STRING },
+      description: { type: Type.STRING },
+      action: { type: Type.STRING },
+      positioning: { type: Type.STRING },
+      lighting: { type: Type.STRING },
+      fx: { type: Type.STRING },
+      sfx: { type: Type.STRING },
+      music: { type: Type.STRING },
+    },
+    required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
+  };
+
+  const response = await ai.models.generateContent({
     model: modelId,
-    contents: [
-      { role: "user", parts: [{ text: prompt }, ...imageParts] }
-    ],
+    contents: [{ parts: [{ text: prompt }, ...imageParts] }],
     config: {
       responseMimeType: "application/json",
-      responseSchema: isArray ? {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            global_style: { type: Type.STRING },
-            duration: { type: Type.STRING },
-            camera_movement: { type: Type.STRING },
-            description: { type: Type.STRING },
-            action: { type: Type.STRING },
-            positioning: { type: Type.STRING },
-            lighting: { type: Type.STRING },
-            fx: { type: Type.STRING },
-            sfx: { type: Type.STRING },
-            music: { type: Type.STRING },
-          },
-          required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
-        }
-      } : {
-        type: Type.OBJECT,
-        properties: {
-          global_style: { type: Type.STRING },
-          duration: { type: Type.STRING },
-          camera_movement: { type: Type.STRING },
-          description: { type: Type.STRING },
-          action: { type: Type.STRING },
-          positioning: { type: Type.STRING },
-          lighting: { type: Type.STRING },
-          fx: { type: Type.STRING },
-          sfx: { type: Type.STRING },
-          music: { type: Type.STRING },
-        },
-        required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
-      }
+      responseSchema: schema as any,
     }
   });
 
   const text = response.text;
+  
   if (!text) throw new Error("AI did not return any text");
   
   let json;
