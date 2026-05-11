@@ -165,7 +165,17 @@ export default function App() {
 
   const copyToClipboard = () => {
     if (!script) return;
-    const text = script.map((s, i) => `镜头 ${i + 1}\n全局风格与画质基地: ${s.globalStyle}\n时长: ${s.duration}\n运镜: ${s.cameraMovement}\n画面: ${s.description}\n动作: ${s.action}\n光影: ${s.lighting}\n特效: ${s.fx}`).join('\n\n');
+    const text = script.map((s, i) => `镜头 ${i + 1}
+全局风格与画质基地: ${s.globalStyle}
+时长: ${s.duration}
+运镜与景别: ${s.cameraMovement}
+画面描述: ${s.description}
+动作描述: ${s.action}
+站位描述: ${s.positioning}
+光影逻辑: ${s.lighting}
+顶级特效: ${s.fx}
+音效描述: ${s.sfx}
+音乐: ${s.music}`).join('\n\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -177,7 +187,7 @@ export default function App() {
     const text = `镜头 ${index + 1}
 全局风格与画质基地: ${s.globalStyle}
 时长: ${s.duration}
-运镜: ${s.cameraMovement}
+运镜与景别: ${s.cameraMovement}
 画面描述: ${s.description}
 动作描述: ${s.action}
 站位描述: ${s.positioning}

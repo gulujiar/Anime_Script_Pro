@@ -16,8 +16,8 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 要求:
 1. 生成至少 5-8 个详细镜头。
 2. 确保 "global_style" 针对高质量生成进行了优化（例如："杰作，最佳质量，细节丰富，动漫风格，电影级光效"）。该字段请使用中文编写，不要包含 "8k" 或 "8k分辨率" 等关键词。
-3. **所有字段必须使用中文编写。**
-4. 如果输入中涉及到参考图片中的角色或场景，请在 "description" 或 "action" 字段中直接提及。如果需要标注引用，请用 "@名字" 的格式（如：@小明），但不要包含文件后缀。
+3. **所有字段必须使用中文编写，且每句话的结尾必须加上句号。**
+4. 如果输入中涉及到参考图片中的角色或场景，请在 "description" 或 "action" 字段中直接提及。如果需要标注引用，请用 "文件名" 的格式（如：小明），但不要包含文件后缀。
 5. 运镜字段必须包含景别（如：特写、中景、远景、俯拍、仰拍）以及动态运镜描述（如：推镜头、拉镜头、摇镜头、移镜头、环绕镜头等）。
 6. 输出必须是一个镜头 JSON 数组。
 
@@ -25,8 +25,8 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - global_style (全局风格与画质基地：即分镜图提示词 Storyboard prompt，请使用中文描述，针对高质量图像生成优化，不含8k关键词)
 - duration (时长，例如 "1.5s", "3s")
 - camera_movement (运镜：必须包含景别描述，以及推拉摇移、环绕、倒放、快进等专业的运镜描述)
-- description (画面描述：视觉效果、环境细节、CG级精度。若涉及参考图请用@标注)
-- action (动作：角色移动、细微表情、肢体冲突。若涉及参考图请用@标注)
+- description (画面描述：视觉效果、环境细节、CG级精度。若涉及参考图请用"文件名"标注)
+- action (动作：角色移动、细微表情、肢体冲突，尽量不要描写服饰。若涉及参考图请用"文件名"标注)
 - positioning (站位描述：角色在画面中的相对位置)
 - lighting (光影逻辑：光轴方向、色温、阴影强度、丁达尔效应等)
 - fx (顶级特效拆解：粒子、流体、爆破效果、能量流动)
@@ -69,7 +69,7 @@ Constraints:
 1. Return ONLY the JSON object for the regenerated Shot #${targetIndex + 1}.
 2. Ensure high-end CG level descriptions.
 3. Keep the overall flow consistent.
-4. All fields must be in Chinese. global_style must not contain "8k" or quality keywords like that.
+4. All fields must be in Chinese and each sentence must end with a full stop (句号). global_style must not contain "8k" or quality keywords like that.
 5. Use "@name" (no extension) to reference specific characters or environments from the uploaded images.
 6. camera_movement MUST include shot scale (景别).
 
@@ -279,6 +279,6 @@ function mapShot(shot: any): AnimeShot {
     lighting: clean(shot.lighting || ""),
     fx: clean(shot.fx || shot.characteristics || shot.special_effects || ""),
     sfx: clean(shot.sfx || ""),
-    music: "无",
+    music: clean(shot.music || "无"),
   };
 }
