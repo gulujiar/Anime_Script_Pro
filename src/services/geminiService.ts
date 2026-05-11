@@ -3,8 +3,7 @@ import { ApiConfig, AnimeShot, UploadedImage } from "../types";
 
 export async function generateAnimeScript(input: string, config: ApiConfig, images: UploadedImage[] = []): Promise<AnimeShot[]> {
   const imageNames = images.map(img => img.name.replace(/\.[^/.]+$/, "")).join(", ");
-  const prompt = `你是一位世界级的动漫导演和分镜规划师。
-请将以下输入转换成专业的、电影级的动漫脚本，包含顶级的CG级镜头。
+  const prompt = `你是一位世界级的动漫导演和分镜规划师。我需要用下面这段剧情在seedance 2.0做动画，请将以下输入转换成专业的、电影级的动漫脚本，包含顶级的CG级镜头。
 
 输入内容: "${input}"
 ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
@@ -12,6 +11,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 重要指令：
 1. **视觉分析优先**：如果你收到了参考图片，你必须首先深度分析图片中角色的穿着（如：夹克、卫衣、制服）、颜色、发型、配饰以及场景特征。
 2. **严禁凭空想象描述**：在生成 "description"（画面描述）和 "action"（动作）时，必须严格遵守参考图中的视觉细节。例如：如果参考图中角色穿着夹克，在脚本描述中绝不能写成“短袖”或“ T恤”。所有视觉描述必须基于图片中的客观事实。
+3. **视觉一致性**：确保在所有生成的镜头中，角色的穿着、长相和场景细节都保持高度一致。
 
 要求:
 1. 生成至少 5-8 个详细镜头。
@@ -194,16 +194,19 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
       body: JSON.stringify({
         model: config.model,
         messages,
+        stream: false,
         // response_format is often not supported by various proxies, better to rely on prompt
-      })
+      }),
+      redirect: 'follow'
     });
 
+    const rawResponseText = await response.text();
+
     if (!response.ok) {
-      const rawText = await response.text();
-      let errText = rawText;
+      let errText = rawResponseText;
       try {
-        const errorJson = JSON.parse(rawText);
-        errText = errorJson.error?.message || errorJson.error?.msg || errorJson.message || rawText;
+        const errorJson = JSON.parse(rawResponseText);
+        errText = errorJson.error?.message || errorJson.error?.msg || errorJson.message || rawResponseText;
       } catch {
         // Not JSON, use raw text
       }
@@ -212,12 +215,11 @@ async function callOpenAICompatible(prompt: string, config: ApiConfig, isArray: 
       throw new Error(errText || `HTTP ${response.status}`);
     }
 
-    const rawData = await response.text();
     let data;
     try {
-      data = JSON.parse(rawData);
+      data = JSON.parse(rawResponseText);
     } catch (e) {
-      console.error("[JSON Parse Error] Raw response:", rawData);
+      console.error("[JSON Parse Error] Raw response:", rawResponseText);
       throw new Error("API 返回了无效的 JSON 格式");
     }
     
