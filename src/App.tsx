@@ -244,6 +244,7 @@ export default function App() {
 光影逻辑: ${s.lighting}
 顶级特效: ${s.fx}
 音效描述: ${s.sfx}
+对白: ${s.dialogue}
 音乐: ${s.music}`).join('\n\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -263,6 +264,7 @@ export default function App() {
 光影逻辑: ${s.lighting}
 顶级特效: ${s.fx}
 音效描述: ${s.sfx}
+对白: ${s.dialogue}
 音乐: ${s.music}`;
 
     navigator.clipboard.writeText(text);
@@ -280,6 +282,7 @@ export default function App() {
     { label: '光影逻辑', key: 'lighting', icon: <Sparkles className="w-4 h-4" /> },
     { label: '顶级特效拆解', key: 'fx', icon: <Sparkles className="w-4 h-4" /> },
     { label: '音效描述', key: 'sfx', icon: <Volume2 className="w-4 h-4" /> },
+    { label: '对白', key: 'dialogue', icon: <Volume2 className="w-4 h-4" /> },
     { label: '音乐（默认,无）', key: 'music', icon: <Music className="w-4 h-4" /> },
   ];
 

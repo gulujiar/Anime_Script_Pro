@@ -31,6 +31,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - lighting (光影逻辑：光轴方向、色温、阴影强度、丁达尔效应等)
 - fx (顶级特效拆解：粒子、流体、爆破效果、能量流动)
 - sfx (音效描述：环境音、打击感)
+- dialogue (对白：角色此时说的话，如果没有对白则填“无”)
 - music (音乐：该字段固定填“无”)
 `;
 
@@ -83,6 +84,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - lighting (光影逻辑)
 - fx (顶级特效)
 - sfx (音效描述)
+- dialogue (对白描述：若无对白填“无”)
 - music (音乐：固定填“无”)
 `;
 
@@ -155,9 +157,10 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
         lighting: { type: Type.STRING },
         fx: { type: Type.STRING },
         sfx: { type: Type.STRING },
+        dialogue: { type: Type.STRING },
         music: { type: Type.STRING },
       },
-      required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
+      required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "dialogue", "music"],
     }
   } : {
     type: Type.OBJECT,
@@ -171,9 +174,10 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
       lighting: { type: Type.STRING },
       fx: { type: Type.STRING },
       sfx: { type: Type.STRING },
+      dialogue: { type: Type.STRING },
       music: { type: Type.STRING },
     },
-    required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "music"],
+    required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "dialogue", "music"],
   };
 
   const response = await ai.models.generateContent({
@@ -325,6 +329,7 @@ function mapShot(shot: any): AnimeShot {
     lighting: clean(shot.lighting || ""),
     fx: clean(shot.fx || shot.characteristics || shot.special_effects || ""),
     sfx: clean(shot.sfx || ""),
+    dialogue: clean(shot.dialogue || "无"),
     music: clean(shot.music || "无"),
   };
 }
