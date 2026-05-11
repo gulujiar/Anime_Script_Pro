@@ -184,17 +184,21 @@ export default function App() {
         uploadedImages: [...uploadedImages],
         timestamp: Date.now(),
       };
-      // Limit history to 10 items to save space
-      const newHistory = [newItem, ...history.slice(0, 9)];
+      // Limit history to 50 items
+      const newHistory = [newItem, ...history.slice(0, 49)];
       setHistory(newHistory);
       try {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
       } catch (e) {
-        console.warn("History storage quota exceeded");
+        console.warn("History storage quota exceeded, attempting to prune...");
         // Try saving fewer history items if it fails
         try {
-           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([newItem, ...history.slice(0, 3)]));
-        } catch (e2) {}
+           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([newItem, ...history.slice(0, 9)]));
+        } catch (e2) {
+           try {
+             localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([newItem]));
+           } catch (e3) {}
+        }
       }
     } catch (error: any) {
       console.error("Generation error:", error);
