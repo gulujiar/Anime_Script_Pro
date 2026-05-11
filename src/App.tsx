@@ -89,6 +89,7 @@ export default function App() {
         setUploadedImages(prev => [
           ...prev,
           {
+            id: Math.random().toString(36).substring(7) + Date.now(),
             name: file.name,
             base64: reader.result as string,
             type: file.type
@@ -99,8 +100,8 @@ export default function App() {
     });
   };
 
-  const removeImage = (name: string) => {
-    setUploadedImages(prev => prev.filter(img => img.name !== name));
+  const removeImage = (id: string) => {
+    setUploadedImages(prev => prev.filter(img => img.id !== id));
   };
 
   const saveConfig = (newConfig: ApiConfig) => {
@@ -328,37 +329,43 @@ export default function App() {
                   />
 
                   {/* Image Upload Area */}
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <AnimatePresence>
-                      {uploadedImages.map((img) => (
-                        <motion.div 
-                          key={img.name}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="group relative w-16 h-16 rounded-xl border border-neutral-800 overflow-hidden"
-                        >
-                          <img src={img.base64} alt={img.name} className="w-full h-full object-cover" />
-                          <button 
-                            onClick={() => removeImage(img.name)}
-                            className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                  <div className="mt-4">
+                    <div className="flex flex-wrap gap-3">
+                      <AnimatePresence>
+                        {uploadedImages.map((img) => (
+                          <motion.div 
+                            key={img.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="group relative w-16 h-16 rounded-xl border border-neutral-800 overflow-hidden bg-neutral-900"
                           >
-                            <Trash2 className="w-4 h-4 text-white" />
-                          </button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                    
-                    <label className="w-16 h-16 rounded-xl border-2 border-dashed border-neutral-800 flex items-center justify-center hover:border-orange-500/50 hover:bg-orange-500/5 cursor-pointer transition-all">
-                      <input 
-                        type="file" 
-                        multiple 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handleImageUpload}
-                      />
-                      <Upload className="w-5 h-5 text-neutral-600" />
-                    </label>
+                            <img src={img.base64} alt={img.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute inset-x-0 bottom-0 bg-neutral-950/80 p-0.5 pointer-events-none">
+                              <p className="text-[8px] text-center text-neutral-400 truncate px-1">{img.name}</p>
+                            </div>
+                            <button 
+                              onClick={() => removeImage(img.id)}
+                              className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
+                            >
+                              <Trash2 className="w-4 h-4 text-white" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      
+                      <label className="w-16 h-16 rounded-xl border-2 border-dashed border-neutral-800 flex flex-col items-center justify-center hover:border-orange-500/50 hover:bg-orange-500/5 cursor-pointer transition-all gap-1">
+                        <input 
+                          type="file" 
+                          multiple 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleImageUpload}
+                        />
+                        <Upload className="w-4 h-4 text-neutral-600" />
+                        <span className="text-[8px] font-bold text-neutral-600">添加图片</span>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="absolute bottom-4 right-4 flex gap-2">

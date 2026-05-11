@@ -9,6 +9,7 @@ export interface ApiConfig {
 }
 
 export interface UploadedImage {
+  id: string;
   name: string;
   base64: string;
   type: string;
