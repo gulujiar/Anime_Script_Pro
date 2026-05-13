@@ -27,6 +27,7 @@ export interface AnimeShot {
   sfx: string;
   music: string;
   dialogue?: string;
+  background?: string;
 }
 
 export interface HistoryItem {

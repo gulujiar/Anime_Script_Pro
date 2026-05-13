@@ -35,6 +35,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - action (动作：角色移动、细微表情、肢体冲突，尽量不要描写服饰。若涉及参考图请用"文件名"标注)
 - positioning (站位描述：角色在画面中的相对位置)
 - lighting (光影逻辑：光轴方向、色温、阴影强度、丁达尔效应等)
+- background (背景细节：详细描述环境、建筑、材质、天气、远景细节，确保镜头衔接不穿帮，需要非常详细描述)
 - fx (顶级特效拆解：粒子、流体、爆破效果、能量流动)
 - sfx (音效描述：环境音、打击感)
 - dialogue (对白：详细描述角色此时所说的话，格式为“角色名：对白内容”，例如“小明：这就是我梦寐以求的力量。”。如果没有对白则填“无”)
@@ -90,6 +91,7 @@ ${images.length > 0 ? `参考图片列表: ${imageNames}` : ""}
 - action (动作描述：尽量不要描写服饰。使用"文件名"标注参考图)
 - positioning (站位描述)
 - lighting (光影逻辑)
+- background (背景细节：详细描述环境、远景，确保衔接一致)
 - fx (顶级特效)
 - sfx (音效描述)
 - dialogue (对白描述：详细描述角色此时所说的话，格式为“角色名：对白内容”，例如“小明：这就是我梦寐以求的力量。”。若无对白填“无”)
@@ -175,12 +177,13 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
         action: { type: Type.STRING },
         positioning: { type: Type.STRING },
         lighting: { type: Type.STRING },
+        background: { type: Type.STRING },
         fx: { type: Type.STRING },
         sfx: { type: Type.STRING },
         dialogue: { type: Type.STRING },
         music: { type: Type.STRING },
       },
-      required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "dialogue", "music"],
+      required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "background", "fx", "sfx", "dialogue", "music"],
     }
   } : {
     type: Type.OBJECT,
@@ -192,12 +195,13 @@ async function callGoogleGemini(prompt: string, config: ApiConfig, isArray: bool
       action: { type: Type.STRING },
       positioning: { type: Type.STRING },
       lighting: { type: Type.STRING },
+      background: { type: Type.STRING },
       fx: { type: Type.STRING },
       sfx: { type: Type.STRING },
       dialogue: { type: Type.STRING },
       music: { type: Type.STRING },
     },
-    required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "fx", "sfx", "dialogue", "music"],
+    required: ["global_style", "duration", "camera_movement", "description", "action", "positioning", "lighting", "background", "fx", "sfx", "dialogue", "music"],
   };
 
   const response = await ai.models.generateContent({
@@ -349,6 +353,7 @@ function mapShot(shot: any): AnimeShot {
     action: clean(shot.action || ""),
     positioning: clean(shot.positioning || ""),
     lighting: clean(shot.lighting || ""),
+    background: clean(shot.background || ""),
     fx: clean(shot.fx || shot.characteristics || shot.special_effects || ""),
     sfx: clean(shot.sfx || ""),
     dialogue: clean(shot.dialogue || "无"),

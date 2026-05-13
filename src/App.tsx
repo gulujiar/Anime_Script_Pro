@@ -244,6 +244,7 @@ export default function App() {
 时长: ${s.duration}
 运镜与景别: ${s.cameraMovement}
 画面描述: ${s.description}
+背景描述: ${s.background}
 动作描述: ${s.action}
 站位描述: ${s.positioning}
 光影逻辑: ${s.lighting}
@@ -264,6 +265,7 @@ export default function App() {
 时长: ${s.duration}
 运镜与景别: ${s.cameraMovement}
 画面描述: ${s.description}
+背景描述: ${s.background}
 动作描述: ${s.action}
 站位描述: ${s.positioning}
 光影逻辑: ${s.lighting}
@@ -282,6 +284,7 @@ export default function App() {
     { label: '时长', key: 'duration', icon: <Loader2 className="w-4 h-4" /> },
     { label: '运镜与景别', key: 'cameraMovement', icon: <Camera className="w-4 h-4" /> },
     { label: '画面描述', key: 'description', icon: <Film className="w-4 h-4" /> },
+    { label: '背景描述', key: 'background', icon: <Globe className="w-4 h-4" /> },
     { label: '动作描述', key: 'action', icon: <User className="w-4 h-4" /> },
     { label: '站位描述', key: 'positioning', icon: <ArrowRightLeft className="w-4 h-4" /> },
     { label: '光影逻辑', key: 'lighting', icon: <Sparkles className="w-4 h-4" /> },
